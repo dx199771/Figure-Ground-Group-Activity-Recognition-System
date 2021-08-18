@@ -7,9 +7,12 @@ import cv2, json, os, pickle
 from tqdm import tqdm
 import numpy as np
 import utils.util as utils
-from get_skeleton import show_action
+
+# video to sequence class
+# processing video is slow in pytorch
+# this function is to pre-processing video file to image sequences
 class Video_to_seq(data_utl.Dataset):
-    def __init__(self, data, root, output, transforms=None, threshold=4, shown=False, target_action=["Clearance","Throw-in"]):
+    def __init__(self, data, root, output, transforms=None, threshold=4, shown=False, target_action=["Corner", "Yellow card", "Clearance","Throw-in","Ball out of play","Substitution"]):
         self.data = self.make_dataset(data,root,num_classes=21,num_sec=threshold)
         self.split_file = data
         self.output = output
@@ -19,11 +22,12 @@ class Video_to_seq(data_utl.Dataset):
         self.frames = []
         self.torch_data = []
         for index, video in tqdm(enumerate(self.data),total= len(self.data), desc ="Convert video to image sequences:"):
-            vid, label, start, action_frame,num_sec = video
-            print(utils.onehot_to_str(label), target_action)
+            if index > 5261:
+                vid, label, start, action_frame,num_sec = video
+                print(utils.onehot_to_str(label), target_action)
 
-            if utils.onehot_to_str(label) in target_action:
-                self.load_frames(vid, start, action_frame, label, num_sec, index)
+                if utils.onehot_to_str(label) in target_action:
+                    self.load_frames(vid, start, action_frame, label, num_sec, index)
 
     def video_to_tensor(self,img):
         """Convert a ``numpy.ndarray`` to tensor.
@@ -73,6 +77,7 @@ class Video_to_seq(data_utl.Dataset):
                 cap.set(1, i)
                 current_frame += 1
                 success, frame = cap.read()
+                # resize function (only use for large resolution file)
                 #frame = cv2.resize(frame, dsize=(640, 360))
                 # whether display current processing frame?
                 if self.shown:
@@ -105,8 +110,6 @@ class Video_to_seq(data_utl.Dataset):
 
     def __len__(self):
         return len(self.data)
-
-
 
 
 

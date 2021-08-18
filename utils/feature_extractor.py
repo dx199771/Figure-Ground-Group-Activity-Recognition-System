@@ -1,3 +1,5 @@
+# abandon file, use get_skeleton.py instead
+
 from single_test.utils.util import *
 import configparser
 import json

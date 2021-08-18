@@ -1,3 +1,13 @@
+"""
+    Author: Xu Dong
+    Student Number: 200708160
+    Email: x.dong@se20.qmul.ac.uk
+
+    School of Electronic Engineering and Computer Science
+    Queen Mary University of London, UK
+    London, UK
+"""
+
 import json
 import os
 import sys
@@ -59,9 +69,6 @@ opWrapper = op.WrapperPython()
 opWrapper.configure(params)
 opWrapper.start()
 datum = op.Datum()
-
-
-
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 
@@ -75,14 +82,13 @@ def show_action(action_folder,rootpath):
     cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
     predictor = DefaultPredictor(cfg)
 
-
-
     file_list = os.listdir(action_folder)
     skeleton_data = []
     frame = cv2.imread(os.path.join(path, file_list[int(len(file_list)/2)]))
     #frame = cv2.imread(os.path.join(path, file_list[15]))
     outputs = predictor(frame)
 
+    # whether display the detected object on a window
     #v = Visualizer(frame[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=2)
     #out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
     #cv2.imshow('window', out.get_image()[:, :, ::-1])
@@ -91,10 +97,10 @@ def show_action(action_folder,rootpath):
 
     boxes = outputs["instances"].pred_boxes.tensor.cpu().numpy()
     for i, newbox in enumerate(boxes):
-
+        #np.array([item for item in data if item is not None])
         skeleton_data_ = get_skeleton(newbox, frame, i)
-        skeleton_data.append(np.array(skeleton_data_))
-    #print(rootpath, i)
+        if skeleton_data_ is not None:
+            skeleton_data.append(np.array(skeleton_data_))
     frame_skeleton = np.array(skeleton_data)
     with open('./data/SkeletonData/{}.npy'.format(rootpath), 'wb') as fp:
         np.save(fp, frame_skeleton)
@@ -156,6 +162,7 @@ def show_action(action_folder,rootpath):
     """
     return 0
 
+# tracker for skeleton sequence data processing and generation
 def inital_tracker(tracker_type="CSRT"):
     tracker_types = ['BOOSTING', 'MIL', 'KCF', 'TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
     if tracker_type == 'BOOSTING':
@@ -177,15 +184,17 @@ def inital_tracker(tracker_type="CSRT"):
 
     return tracker
 
+
+# get players skeleton data for figure stream features extraction
 def get_skeleton(bbox,frame, player_index, offset=15):
+
     x1,y1,x2,y2 = bbox.astype(int)
     height, width, _  = frame.shape
-
+    # extract skeleton from bounding box
     if y1-offset>=0 and x1-offset>=0 and y2+offset<height and x2+offset<width:
         frame_ = frame[y1-offset:(y2)+offset,x1-offset:x2+offset, :]
     else:
         frame_ = frame[y1:y2,x1:x2, :]
-    #cv2.imshow("",frame_)
     scale_percent = 8
     width = int(frame_.shape[1] * scale_percent / 10)
     height = int(frame_.shape[0] * scale_percent / 10)
@@ -198,17 +207,21 @@ def get_skeleton(bbox,frame, player_index, offset=15):
 
     if datum.poseKeypoints is not None:
         cv2.imwrite("./results/test" + str(player_index) +"_"+ str("ss") + ".jpg",datum.cvOutputData)
-        #print(player_index, frame_index,datum.poseKeypoints[0,:,:] )
-
         keypoints = datum.poseKeypoints[0,:,:].tolist()
         return keypoints
+
+# generate skeleton data and save to data folder
+"""
 for i in os.listdir(r"F:\Disssertation\single_test\data\VideoData\seq3"):
     target_folder = os.path.join(r"F:\Disssertation\single_test\data\VideoData\seq3",i)
     show_action(target_folder,"seq3/"+i)
+    print("number:",i)
 for i in os.listdir(r"F:\Disssertation\single_test\data\VideoData\seq4"):
     target_folder = os.path.join(r"F:\Disssertation\single_test\data\VideoData\seq4",i)
     show_action(target_folder,"seq4/"+i)
-"""
+    print("number:",i)
+
+
 all_keys = {}
 with open("./data/1436.json", 'r') as r:
     data = json.load(r)

@@ -1,9 +1,17 @@
-from torch.utils.data import Dataset
-from torchvision import transforms
+"""
+    Author: Xu Dong
+    Student Number: 200708160
+    Email: x.dong@se20.qmul.ac.uk
+
+    School of Electronic Engineering and Computer Science
+    Queen Mary University of London, UK
+    London, UK
+"""
 import torch
-import torch.utils.data as data_utl
+from torch.utils.data import Dataset
+
 from PIL import Image
-import cv2, json, os, pickle ,math
+import os, pickle ,math
 import numpy as np
 import utils.util as utils
 import Config
@@ -28,8 +36,56 @@ def read_txt(path):
 def get_label(label_file,label):
     for i in label_file:
         if(i.split()[0] == label[:-4]):
-            return i.split()[1]
+            return i.split()[1:-1]
     return None
+
+class Twostream_dataloader(Dataset):
+    def __init__(self, img_folder_path, skeleton_folder_path,txt_file_path, num_classes, transforms=None):
+        self.img_folder_path = img_folder_path
+        self.skeleton_folder_path = skeleton_folder_path
+
+        self.index_lookup_img = os.listdir(self.img_folder_path)
+        self.index_lookup_img.sort(key=lambda x: int(x))
+
+        self.index_lookup_skeleton = os.listdir(self.skeleton_folder_path)
+
+        self.skeleton_folder_path = skeleton_folder_path
+        self.index_lookup = os.listdir(self.skeleton_folder_path)
+        self.index_lookup.sort(key=lambda x: int(x[:-4]))
+        self.data_label = read_txt(txt_file_path)
+        self.num_classes = num_classes
+        self.transforms = transforms
+    def __getitem__(self, index):
+        data = []
+
+        img_path = self.index_lookup_img[index]
+
+        img_list = os.listdir(os.path.join(self.img_folder_path, img_path))
+        img_list.sort()
+        img_list.sort(key=lambda x: int(x.split("_")[1][:-4]))
+        for image in img_list:
+            img = Image.open(os.path.join(self.img_folder_path, img_path, image))
+            label = image.split("_")[0]
+            if self.transforms is not None:
+                img = self.transforms(img)
+            data.append(img)
+        inputs = torch.stack(data).permute(1, 0, 2, 3)
+
+        npy_data = os.path.join(self.skeleton_folder_path, self.index_lookup[index])
+        data = np.load(npy_data, allow_pickle=True)
+        label_skeleton = get_label(self.data_label, self.index_lookup[index])
+        if data.shape[0] == 0:
+            data_ = np.zeros((8, 25, 3))
+
+            return inputs[:,::2,:,:], torch.from_numpy(utils.index_to_onehot(label, self.num_classes)),\
+                   torch.from_numpy(data_[:, :, :2]), utils.index_to_onehot(label_skeleton, self.num_classes, figure=True)
+        data_ = skeleton_interpolation(data)
+
+        return inputs[:,::2,:,:], torch.from_numpy(utils.index_to_onehot(label, self.num_classes)),\
+               torch.from_numpy(data_[:, :, :2]), utils.index_to_onehot(label_skeleton, self.num_classes, figure=True)
+
+    def __len__(self):
+        return len(self.index_lookup)
 
 
 class Groundstream_dataloader(Dataset):
@@ -54,9 +110,9 @@ class Groundstream_dataloader(Dataset):
             if self.transforms is not None:
                 img = self.transforms(img)
             data.append(img)
-        #print(torch.stack(data).shape,label)
-        #print(torch.stack(data).shape,torch.from_numpy(utils.index_to_onehot(label, 17)))
-        return (torch.stack(data)[::2,:,:,:], torch.from_numpy(utils.index_to_onehot(label, self.num_classes)))
+        inputs = torch.stack(data).permute(1,0,2,3)
+
+        return (inputs[:,::2,:,:], torch.from_numpy(utils.index_to_onehot(label, self.num_classes)))
 
     def __len__(self):
         return len(self.index_lookup)
@@ -78,31 +134,36 @@ class Figurestream_dataloader(Dataset):
     def __getitem__(self, index):
         npy_data = os.path.join(self.img_folder_path, self.index_lookup[index])
         data = np.load(npy_data, allow_pickle=True)
-        #print(self.data_label[0],self.index_lookup[index])
         label = get_label(self.data_label,self.index_lookup[index])
-        print(data.shape)
-        data_ = self.skeleton_interpolation(data)
-        return torch.from_numpy(data_[:,:,:2]) , utils.index_to_onehot(label, self.num_classes)
+
+        if data.shape[0] == 0:
+            data_ = np.zeros((8,25,3))
+
+            return torch.from_numpy(data_[:,:,:2]) , utils.index_to_onehot(label, self.num_classes,figure=True)
+        data_ = skeleton_interpolation(data)
+        #print(utils.index_to_onehot(label, self.num_classes))
+        return torch.from_numpy(data_[:,:,:2]) , utils.index_to_onehot(label, self.num_classes,figure=True)
     def __len__(self):
         return len(self.index_lookup)
 
-    def skeleton_interpolation(self,data):
-        if data.shape[0] == 8:
-            return data
-        elif data.shape[0]>8:
-            # if number of skeleton data larger than 8
-            # find 8 maximum values
-            argmax = np.argpartition((np.sum(data,axis=1)[:,-1]), -8)[-8:]
-            return data[argmax]
-        elif data.shape[0]<8:
-            # if number of skeleton data less than 8
-            # do data generation
-            return np.repeat(data,[math.floor(8/data.shape[0])],axis=0)[:8]
+def skeleton_interpolation(data):
+    # eliminate none objects
+    if data.shape[0] == 8:
+        return data
+    elif data.shape[0] > 8:
+        # if number of skeleton data larger than 8
+        # find 8 maximum values
+        argmax = np.argpartition((np.sum(data,axis=1)[:,-1]), -8)[-8:]
+        return data[argmax]
+    elif data.shape[0]<8:
+        # if number of skeleton data less than 8
+        # do data generation
+        return np.repeat(data,[math.ceil(8/data.shape[0])],axis=0)[:8]
 
 
 
 
-
+"""
 for i in os.listdir(r"F:\Disssertation\single_test\data\SkeletonData"):
     a = np.load(os.path.join(r"F:\Disssertation\single_test\data\SkeletonData", i),allow_pickle=True)
     if a.ndim == 1:
@@ -111,3 +172,4 @@ for i in os.listdir(r"F:\Disssertation\single_test\data\SkeletonData"):
         #print(np.concatenate(a,axis=0).shape,a.shape)
 
     #print(a.shape)
+"""

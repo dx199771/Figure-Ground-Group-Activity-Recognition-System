@@ -1,8 +1,7 @@
 import numpy as np
 import numbers
 import random
-
-
+# transformer for video data
 class RandomCrop(object):
     """Crop the given video sequences (t x h x w) at a random location.
     Args:

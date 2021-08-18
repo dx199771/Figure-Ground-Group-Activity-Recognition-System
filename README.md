@@ -1,13 +1,17 @@
 # Two-Stream Figure–Ground Group Activity Recognition System in Soccer Videos
 In this reporsitory, we proposed a two-stream figure--ground group activity recognition system in soccer games. The system contains two streams:
-1) Ground stream: mainly 
+1) Ground stream: mainly models the background features to capture background and temporal features.
+2) Figure stream: models the individuals’ action features by using extracted skeleton data to capture spatial features,
+The figure-ground idea is inspired by Gestalt's psychology principle, Figure–Ground perception states that human visual system tends to perceive a scene into Ground (background around the main object) and Figure (main objects). 
 
-![](/assets/ss.jpg)
 > Human visual system tends to percieve the world by figure-ground perception
 
 
+![](/assets/ss.jpg)
+
+
 ## Network structure
-![](/assets/draft new.png)
+![](/assets/draft.jpg)
 
 ## Dependencies
 ```
@@ -35,17 +39,30 @@ After you acquired the access for the dataset, download the HQ resolution datase
 Unzip the soccer game videos and labels then put them together in the data folder, Be noticed that in each game video folder there are three .json file. We only need the json file with soocer game action label.
 
 ## Getting Started
-0. Stage0: Download CMake-GUI (You can either download "Windows x64 Installer" or "Windows x64 ZIP").
-1. Stage1. setup Facebook detectron2 for player detection, instructions can be found at: [FaceBook Detectron2](https://github.com/facebookresearch/detectron2)
-2. Stage2: setup OpenPose for skeleton detection, instructions can be found at: [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
-3. Stage3: Make sure you put the downloaded data in data folder, change the root parameter in line 56 in [main.py](main.py) file and run the code.
-4. Stage4: Comment out the last few lines in [dataloader.py](/utils/dataloader.py) and run dataloder.py until finished (this is for extract skeleton features).
+Clone this reporsitory using
+`git clone https://github.com/dx199771/Figure-Ground-Group-Activity-Recognition-System.git`
 
+Stage0: Download CMake-GUI (You can either download "Windows x64 Installer" or "Windows x64 ZIP").
 
+Stage1. setup Facebook detectron2 for player detection, instructions can be found at: [FaceBook Detectron2](https://github.com/facebookresearch/detectron2)
+
+Stage2: setup OpenPose for skeleton detection, instructions can be found at: [OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)
+
+Stage3: Make sure you put the downloaded data in data folder, change the root parameter in line 56 in [main.py](main.py) file and run the code.
+
+Stage4: Comment out the last few lines in [dataloader.py](/utils/dataloader.py) and run dataloder.py until finished (this is for extract skeleton features).
+
+Stage5: run [main.py](main.py) for training and testing, you can adjust network configurations and parameter using ArgumentParser.
+We provides some pre-trained models in models folder.
+
+## Results
+![image](https://user-images.githubusercontent.com/33721483/129976154-15174f5b-ff2f-450a-aa30-ce5b66274851.png)
 ## License
-Two-Stream Figure–Ground Group Activity Recognition System in Soccer Videos is released under the [GNU General Public License v3.0](LICENSE)
+Two-Stream Figure–Ground Group Activity Recognition System in Soccer Videos is released under the [GNU General Public License v3.0](LICENSE).
 
-##Citation
+## Contact
+if you have any questions and feedback of our system, or want to contribute this repostiory, you are more than welcome to contact us at xudong9771@gmail.com.
+## Citation
 ```
 
 ```
